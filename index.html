@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>GeekNews 요약</title>
+<style>
+body{font-family:sans-serif;max-width:720px;margin:40px auto;padding:0 16px;background:#f7f7f8;color:#222}
+button{font-size:16px;padding:10px 20px;border:0;border-radius:8px;background:#3b5bdb;color:#fff;cursor:pointer}
+button:disabled{background:#aaa}
+.card{background:#fff;border-radius:10px;padding:16px;margin:12px 0;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.card h3{margin:0 0 8px;font-size:16px}
+.card a{color:#3b5bdb;text-decoration:none}
+.card p{margin:0;line-height:1.6}
+.muted{color:#888}
+</style>
+</head>
+<body>
+<h1>GeekNews 10개 요약</h1>
+<button id="go">요약 시작</button>
+<div id="result"></div>
+<script>
+const btn = document.getElementById("go");
+const result = document.getElementById("result");
+
+btn.onclick = async () => {
+  btn.disabled = true;
+  result.innerHTML = "";
+  try {
+    const res = await fetch("list.php");
+    const data = await res.json();
+    for (const item of data.items) {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = '<h3><a target="_blank"></a></h3><p class="muted">요약 중...</p>';
+      card.querySelector("a").href = item.url;
+      card.querySelector("a").textContent = item.title;
+      result.appendChild(card);
+      try {
+        const r = await fetch("summarize.php", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({url: item.url, title: item.title})
+        });
+        const d = await r.json();
+        card.querySelector("p").textContent = d.summary ?? d.error ?? "요약 실패";
+        card.querySelector("p").className = "";
+      } catch (e) {
+        card.querySelector("p").textContent = "요약 실패";
+      }
+    }
+  } catch (e) {
+    result.textContent = "목록을 가져오지 못했습니다.";
+  }
+  btn.disabled = false;
+};
+</script>
+</body>
+</html>
