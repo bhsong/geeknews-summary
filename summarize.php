@@ -1,6 +1,8 @@
 <?php
 require_once __DIR__ . "/env.php";
 require_once __DIR__ . "/summary_repo.php";
+require_once __DIR__ . "/article_repo.php";
+
 header("Content-Type: application/json; charset=utf-8");
 
 // POST 본문의 JSON 읽기 (CLI의 $argv[1] 대신)
@@ -42,16 +44,9 @@ if ($html === false) {
     exit;
 }
 
-// 1) script, style 태그는 내용까지 통째로 제거
-$html = preg_replace('/<script\b[^>]*>.*?<\/script>/is', '', $html);
-$html = preg_replace('/<style\b[^>]*>.*?<\/style/is', '', $html);
+$text = extractBody($html);
 
-// 2) 나머지 태그 제거 -> 텍스트만 남음
-$text = strip_tags($html);
-
-// 3) 공백 정리: 연속된 공백/줄바꿈을 하나로
-$text = preg_replace('/\s+/', ' ', $text);
-$text = trim($text);
+saveArticle($topicId, $title, $text);
 
 $apiKey = env("GEMINI_API_KEY");
 if ($apiKey === null) {
@@ -102,5 +97,26 @@ echo json_encode([
     "cached" => false
 ], JSON_UNESCAPED_UNICODE);
 
+function extractBody(string $html): string
+{
+    $start = strpos($html, "class='topictitle");
+    if ($start !== false) {
+        // 마커 지정 이후 첫 '>'까지 건너뛰어 태그를 온전히 통과
+        $gt = strpos($html, ">", $start);
+        $html = substr($html, $gt == false ? $start : $gt + 1);
+    }
 
+    foreach (["함께보면 좋은 글", "댓글과 토론", "class='comment_thread"] as $marker) {
+        $pos = strpos($html, $marker);
+        if ($pos !== false) {
+            $html = substr($html, 0, $pos);
+        }
+    }
+
+    $html = preg_replace('/<script\b[^>]*>.*?<\/script>/is', '', $html);
+    $html = preg_replace('/<style\b[^>]*>.*?<\/style>/is', '', $html);
+    $text = strip_tags($html);
+    $text = preg_replace('/\s+/', ' ', $text);
+    return trim($text);
+}
 
