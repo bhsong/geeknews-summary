@@ -32,6 +32,6 @@ function listSummary(int $limit = 50): array
 {
     $stmt = getDb()->prepare("SELECT * FROM summaries ORDER BY updated_at DESC LIMIT ?");
     $stmt->bindValue(1, $limit, PDO::PARAM_INT);
-    $stmt->excute();
+    $stmt->execute();
     return $stmt->fetchAll();
 }

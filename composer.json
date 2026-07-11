@@ -8,5 +8,10 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true
         }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
     }
 }
