@@ -1,58 +1,150 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8">
-<title>GeekNews 요약</title>
-<style>
-body{font-family:sans-serif;max-width:720px;margin:40px auto;padding:0 16px;background:#f7f7f8;color:#222}
-button{font-size:16px;padding:10px 20px;border:0;border-radius:8px;background:#3b5bdb;color:#fff;cursor:pointer}
-button:disabled{background:#aaa}
-.card{background:#fff;border-radius:10px;padding:16px;margin:12px 0;box-shadow:0 1px 3px rgba(0,0,0,.08)}
-.card h3{margin:0 0 8px;font-size:16px}
-.card a{color:#3b5bdb;text-decoration:none}
-.card p{margin:0;line-height:1.6}
-.muted{color:#888}
-</style>
+    <meta charset="utf-8">
+    <title>GeekNews 요약 + 챗봇</title>
+    <style>
+        body{font-family:sans-serif;max-width:720px;margin:40px auto;padding:0 16px;background:#f7f7f8;color:#222}
+        button{font-size:16px;padding:10px 20px;border:0;border-radius:8px;background:#3b5bdb;color:#fff;cursor:pointer}
+        button:disabled{background:#aaa}
+        .card{background:#fff;border-radius:10px;padding:16px;margin:12px 0;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+        .card h3{margin:0 0 8px;font-size:16px}
+        .card a{color:#3b5bdb;text-decoration:none}
+        .card p{margin:0;line-height:1.6}
+        .muted{color:#888}
+        h2{margin-top:48px}
+        #chatbox{background:#fff;border-radius:10px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.08);max-height:420px;overflow-y:auto}
+        .msg{margin:10px 0;line-height:1.6;white-space:pre-wrap}
+        .msg.user{text-align:right}
+        .msg.user span{display:inline-block;background:#3b5bdb;color:#fff;padding:8px 12px;border-radius:12px 12px 2px 12px;max-width:80%;text-align:left}
+        .msg.model span{display:inline-block;background:#eef0f4;padding:8px 12px;border-radius:12px 12px 12px 2px;max-width:80%}
+        .srcs{font-size:13px;margin:4px 0 0}
+        .srcs a{color:#3b5bdb;margin-right:8px}
+        #chatform{display:flex;gap:8px;margin-top:12px}
+        #chatinput{flex:1;font-size:16px;padding:10px;border:1px solid #ccc;border-radius:8px}
+    </style>
 </head>
 <body>
-<h1>GeekNews 10개 요약</h1>
+<h1>GeekNews 첫 10개 요약</h1>
 <button id="go">요약 시작</button>
 <div id="result"></div>
-<script>
-const btn = document.getElementById("go");
-const result = document.getElementById("result");
 
-btn.onclick = async () => {
-  btn.disabled = true;
-  result.innerHTML = "";
-  try {
-    const res = await fetch("list.php");
-    const data = await res.json();
-    for (const item of data.items) {
-      const card = document.createElement("div");
-      card.className = "card";
-      card.innerHTML = '<h3><a target="_blank"></a></h3><p class="muted">요약 중...</p>';
-      card.querySelector("a").href = item.url;
-      card.querySelector("a").textContent = item.title;
-      result.appendChild(card);
-      try {
-        const r = await fetch("summarize.php", {
-          method: "POST",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({url: item.url, title: item.title})
-        });
-        const d = await r.json();
-        card.querySelector("p").textContent = d.summary ?? d.error ?? "요약 실패";
-        card.querySelector("p").className = "";
-      } catch (e) {
-        card.querySelector("p").textContent = "요약 실패";
-      }
+<h2>기사 챗봇</h2>
+<div id="chatbox"><p class="muted">요약된 기사들에 대해 물어보세요.</p></div>
+<div id="chatform">
+    <input id="chatinput" placeholder="예: 일리야 서츠케버 추천 논문이 뭐야?">
+    <button id="send">전송</button>
+</div>
+
+<script>
+    // ---------- 요약 (기존) ----------
+    const btn = document.getElementById("go");
+    const result = document.getElementById("result");
+
+    btn.onclick = async () => {
+        btn.disabled = true;
+        result.innerHTML = "";
+        try {
+            const res = await fetch("list.php");
+            const data = await res.json();
+            for (const item of data.items) {
+                const card = document.createElement("div");
+                card.className = "card";
+                card.innerHTML = '<h3><a target="_blank"></a></h3><p class="muted">요약 중...</p>';
+                card.querySelector("a").href = item.url;
+                card.querySelector("a").textContent = item.title;
+                result.appendChild(card);
+                try {
+                    const r = await fetch("summarize.php", {
+                        method: "POST",
+                        headers: {"Content-Type": "application/json"},
+                        body: JSON.stringify({url: item.url, title: item.title})
+                    });
+                    const d = await r.json();
+                    card.querySelector("p").textContent = d.summary ?? d.error ?? "요약 실패";
+                    card.querySelector("p").className = "";
+                } catch (e) {
+                    card.querySelector("p").textContent = "요약 실패";
+                }
+            }
+        } catch (e) {
+            result.textContent = "목록을 가져오지 못했습니다.";
+        }
+        btn.disabled = false;
+    };
+
+    // ---------- 챗봇 ----------
+    const chatbox = document.getElementById("chatbox");
+    const chatinput = document.getElementById("chatinput");
+    const sendBtn = document.getElementById("send");
+    let sessionId = null;   // 첫 응답 후 자동 유지
+
+    function addBubble(role, text, sources) {
+        const div = document.createElement("div");
+        div.className = "msg " + role;
+        const span = document.createElement("span");
+        span.textContent = text;
+        div.appendChild(span);
+        if (sources && sources.length > 0) {
+            const s = document.createElement("p");
+            s.className = "srcs";
+            for (const src of sources) {
+                const a = document.createElement("a");
+                a.href = src.url;
+                a.target = "_blank";
+                a.textContent = "#" + src.topic_id;
+                a.title = src.title;
+                s.appendChild(a);
+            }
+            div.appendChild(s);
+        }
+        chatbox.appendChild(div);
+        chatbox.scrollTop = chatbox.scrollHeight;
+        return span;
     }
-  } catch (e) {
-    result.textContent = "목록을 가져오지 못했습니다.";
-  }
-  btn.disabled = false;
-};
+
+    async function sendMessage() {
+        const q = chatinput.value.trim();
+        if (q === "") return;
+        chatinput.value = "";
+        sendBtn.disabled = true;
+        addBubble("user", q);
+        const pending = addBubble("model", "생각 중...");
+        try {
+            const r = await fetch("chat.php", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({question: q, session_id: sessionId})
+            });
+            const d = await r.json();
+            if (d.error) {
+                pending.textContent = "오류: " + d.error;
+            } else {
+                sessionId = d.session_id;
+                pending.textContent = d.answer;
+                if (d.sources && d.sources.length > 0) {
+                    const s = document.createElement("p");
+                    s.className = "srcs";
+                    for (const src of d.sources) {
+                        const a = document.createElement("a");
+                        a.href = src.url; a.target = "_blank";
+                        a.textContent = "#" + src.topic_id; a.title = src.title;
+                        s.appendChild(a);
+                    }
+                    pending.parentElement.appendChild(s);
+                }
+            }
+        } catch (e) {
+            pending.textContent = "요청 실패";
+        }
+        sendBtn.disabled = false;
+        chatinput.focus();
+    }
+
+    sendBtn.onclick = sendMessage;
+    chatinput.addEventListener("keydown", e => {
+        if (e.key === "Enter") sendMessage();
+    });
 </script>
 </body>
 </html>

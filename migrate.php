@@ -1,6 +1,14 @@
 <?php
 require_once __DIR__ . "/db.php";
 
+$setup = new PDO(
+    "mysql:host=" . env("DB_HOST", "localhost") . ";charset=utf8mb4",
+    env("DB_USER"),
+    env("DB_PASS"),
+    [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+);
+$setup->exec("CREATE DATABASE IF NOT EXISTS `" . getDbName() . "` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+
 $pdo = getDb();
 
 // 실행 이력 테이불 (없으면 생성)
