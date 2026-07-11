@@ -1,17 +1,27 @@
 <?php
 require_once __DIR__ . "/gemini.php";
 require_once __DIR__ . "/article_repo.php";
+require_once __DIR__ . "/chat_repo.php";
 
 header("Content-Type: application/json; charset=utf-8");
 
 $input = json_decode(file_get_contents("php://input"), true);
 $question = trim($input["question"] ?? "");
+$sessionId = isset($input["session_id"]) ? (int)$input["session_id"] : null;
 
 if ($question  === "") {
     http_response_code(400);
     echo json_encode(["error" => "question 필드가 필요합니다."], JSON_UNESCAPED_UNICODE);
     exit;
 }
+
+// 세션 확보: 없거나 유효하지 않으면 새로 생성
+if ($sessionId === null || !sessionExists($sessionId)) {
+    $sessionId = createSession();
+}
+
+// 이전 대화 불러오기 (질문 저장 전에!)
+$history = getRecentMessages($sessionId);
 
 // 1) 질문과 관련된 기사 검색
 $articles = searchArticles($question, 3);
@@ -40,16 +50,25 @@ if ($context == "") {
         . $context . "질문: {$question}";
 }
 
+// 메시지 배열:; 이전 대화 + 이번 질문(컨텍스트 포함 프롬프트)
+$messages = $history;
+$messages[] = ["role" => "user", "content" => $prompt];
+
 // 4) Gemini 호출
 try {
-    $answer = callGemini($prompt);
+    $answer = callGeminiChat($messages);
 } catch (RuntimeException $e) {
     http_response_code(500);
     echo json_encode(["error" => $e->getMessage()], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
+// 대화 저장: DB에는 원본 질문만 (컨텍스트 덩어리 말고)
+addMessage($sessionId, "user", $question);
+addmessage($sessionId, "model", $answer);
+
 echo json_encode([
+    "session_id" => $sessionId,
     "answer" => $answer,
     "sources" => $sources
 ], JSON_UNESCAPED_UNICODE);
