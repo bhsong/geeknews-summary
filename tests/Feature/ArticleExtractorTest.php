@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/../../article_extractor.php';
+require_once __DIR__ . '/../../src/article_extractor.php';
 
 test('extractBody strips everything before the topictitle marker', function () {
     $html = "<div>노이즈</div><h1 class='topictitle'>제목</h1><p>본문 내용</p>";

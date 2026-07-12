@@ -8,7 +8,7 @@ function loadEnv(): void
     }
     $loaded = true;
 
-    foreach ([__DIR__ . "/.env", __DIR__ . "/.env.local"] as $file) {
+    foreach ([__DIR__ . "/../.env", __DIR__ . "/../.env.local"] as $file) {
         if (!file_exists($file)) continue;
         foreach (file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
             $line = trim($line);

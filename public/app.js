@@ -6,7 +6,7 @@ btn.onclick = async () => {
     btn.disabled = true;
     result.innerHTML = "";
     try {
-        const res = await fetch("list.php");
+        const res = await fetch("api/list.php");
         const data = await res.json();
         for (const item of data.items) {
             const card = document.createElement("div");
@@ -16,7 +16,7 @@ btn.onclick = async () => {
             card.querySelector("a").textContent = item.title;
             result.appendChild(card);
             try {
-                const r = await fetch("summarize.php", {
+                const r = await fetch("api/summarize.php", {
                     method: "POST",
                     headers: {"Content-Type": "application/json"},
                     body: JSON.stringify({url: item.url, title: item.title})
@@ -73,7 +73,7 @@ async function sendMessage() {
     const pending = addBubble("model", "생각 중...");
     const pendingMsg = pending.parentElement;
     try {
-        const r = await fetch("chat.php", {
+        const r = await fetch("api/chat.php", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({question: q, session_id: sessionId})

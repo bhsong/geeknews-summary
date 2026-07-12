@@ -14,5 +14,5 @@
 3. `.env.local` 생성:
    DB_PASS=비밀번호
    GEMINI_API_KEY=키
-4. php migrate.php
-5. php -S localhost:8000 → http://localhost:8000
+4. php database/migrate.php
+5. php -S localhost:8000 -t public → http://localhost:8000

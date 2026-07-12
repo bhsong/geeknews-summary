@@ -1,9 +1,9 @@
 <?php
-require_once __DIR__ . "/gemini.php";
-require_once __DIR__ . "/summary_repo.php";
-require_once __DIR__ . "/article_repo.php";
-require_once __DIR__ . "/article_extractor.php";
-require_once __DIR__ . "/api.php";
+require_once __DIR__ . "/../../src/gemini.php";
+require_once __DIR__ . "/../../src/summary_repo.php";
+require_once __DIR__ . "/../../src/article_repo.php";
+require_once __DIR__ . "/../../src/article_extractor.php";
+require_once __DIR__ . "/../../src/api.php";
 
 jsonHeader();
 

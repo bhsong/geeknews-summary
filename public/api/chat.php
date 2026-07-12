@@ -1,8 +1,8 @@
 <?php
-require_once __DIR__ . "/gemini.php";
-require_once __DIR__ . "/article_repo.php";
-require_once __DIR__ . "/chat_repo.php";
-require_once __DIR__ . "/api.php";
+require_once __DIR__ . "/../../src/gemini.php";
+require_once __DIR__ . "/../../src/article_repo.php";
+require_once __DIR__ . "/../../src/chat_repo.php";
+require_once __DIR__ . "/../../src/api.php";
 
 jsonHeader();
 

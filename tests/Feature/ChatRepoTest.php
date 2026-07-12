@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/../../chat_repo.php';
+require_once __DIR__ . '/../../src/chat_repo.php';
 
 afterEach(function () {
     if (isset($this->sessionId)) {

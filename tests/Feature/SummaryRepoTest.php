@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/../../summary_repo.php';
+require_once __DIR__ . '/../../src/summary_repo.php';
 
 beforeEach(function () {
     $this->topicId = 999000002;
