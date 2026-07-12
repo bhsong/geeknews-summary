@@ -15,7 +15,7 @@ function sessionExists(int $sessionId): bool
     return $stmt->fetch() !== false;
 }
 
-function addmessage(int $sessionId, string $role, string $content): void
+function addMessage(int $sessionId, string $role, string $content): void
 {
     $stmt = getDb()->prepare(
         "INSERT INTO chat_message (session_id, role, content) VALUES (?,?,?)"
@@ -23,7 +23,7 @@ function addmessage(int $sessionId, string $role, string $content): void
     $stmt->execute([$sessionId, $role, $content]);
 }
 
-// 최근 N개를 시간순으로 (토근 절략 위해 오래된 건 잘라냄)
+// 최근 N개를 시간순으로 (토큰 절약 위해 오래된 건 잘라냄)
 function getRecentMessages(int $sessionId, int $limit = 20): array
 {
     $stmt = getDb()->prepare(

@@ -2,17 +2,16 @@
 require_once __DIR__ . "/gemini.php";
 require_once __DIR__ . "/article_repo.php";
 require_once __DIR__ . "/chat_repo.php";
+require_once __DIR__ . "/api.php";
 
-header("Content-Type: application/json; charset=utf-8");
+jsonHeader();
 
-$input = json_decode(file_get_contents("php://input"), true);
+$input = jsonInput();
 $question = trim($input["question"] ?? "");
 $sessionId = isset($input["session_id"]) ? (int)$input["session_id"] : null;
 
 if ($question  === "") {
-    http_response_code(400);
-    echo json_encode(["error" => "question 필드가 필요합니다."], JSON_UNESCAPED_UNICODE);
-    exit;
+    jsonError(400, "question 필드가 필요합니다.");
 }
 
 // 세션 확보: 없거나 유효하지 않으면 새로 생성
@@ -58,14 +57,12 @@ $messages[] = ["role" => "user", "content" => $prompt];
 try {
     $answer = callGeminiChat($messages);
 } catch (RuntimeException $e) {
-    http_response_code(500);
-    echo json_encode(["error" => $e->getMessage()], JSON_UNESCAPED_UNICODE);
-    exit;
+    jsonError(500, $e->getMessage());
 }
 
 // 대화 저장: DB에는 원본 질문만 (컨텍스트 덩어리 말고)
 addMessage($sessionId, "user", $question);
-addmessage($sessionId, "model", $answer);
+addMessage($sessionId, "model", $answer);
 
 echo json_encode([
     "session_id" => $sessionId,

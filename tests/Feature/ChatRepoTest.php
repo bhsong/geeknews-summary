@@ -19,12 +19,12 @@ test('sessionExists returns false for an unknown session id', function () {
     expect(sessionExists(999999999))->toBeFalse();
 });
 
-test('addmessage stores a message and getRecentMessages returns it in chronological order', function () {
+test('addMessage stores a message and getRecentMessages returns it in chronological order', function () {
     $this->sessionId = createSession();
 
-    addmessage($this->sessionId, 'user', '첫 번째 질문');
-    addmessage($this->sessionId, 'model', '첫 번째 답변');
-    addmessage($this->sessionId, 'user', '두 번째 질문');
+    addMessage($this->sessionId, 'user', '첫 번째 질문');
+    addMessage($this->sessionId, 'model', '첫 번째 답변');
+    addMessage($this->sessionId, 'user', '두 번째 질문');
 
     $messages = getRecentMessages($this->sessionId);
 
@@ -38,7 +38,7 @@ test('getRecentMessages respects the limit while keeping chronological order', f
     $this->sessionId = createSession();
 
     for ($i = 1; $i <= 5; $i++) {
-        addmessage($this->sessionId, 'user', "메시지 {$i}");
+        addMessage($this->sessionId, 'user', "메시지 {$i}");
     }
 
     $messages = getRecentMessages($this->sessionId, 2);
