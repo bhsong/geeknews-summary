@@ -1,27 +1,23 @@
 <?php
+
 require_once __DIR__ . "/../../src/gemini.php";
 require_once __DIR__ . "/../../src/summary_repo.php";
 require_once __DIR__ . "/../../src/article_repo.php";
 require_once __DIR__ . "/../../src/article_extractor.php";
+require_once __DIR__ . "/../../src/topic.php";
 require_once __DIR__ . "/../../src/api.php";
 
 jsonHeader();
 
-// POST 본문의 JSON 읽기 (CLI의 $argv[1] 대신)
 $input = jsonInput();
-$url = $input["url"] ?? null;
+$topicId = parseTopicId($input["topic_id"] ?? null);
 
-if ($url === null) {
-    jsonError(400, "url 필드가 필요합니다.");
+if ($topicId === null) {
+    jsonError(400, "topic_id(양의 정수)가 필요합니다.");
 }
 
-// $url = $argv[1];
-// URL에서 topic_id 추출
-if (!preg_match('/topic\?id=(\d+)/', $url, $m)) {
-    jsonError(400, "topic id를 찾을 수 없습니다.");
-}
-$topicId = (int)$m[1];
-$title = $input["title"] ?? "";
+// 대상 URL은 서버가 조립. 클라이언트가 준 URL은 어디에도 쓰지 않음
+$url = topicUrl($topicId);
 
 // 캐시 확인: 있으면 Gemini 호출 없이 즉시 반환
 $cached = findSummary($topicId);
@@ -29,17 +25,19 @@ if ($cached !== null) {
     echo json_encode([
         "url" => $cached["url"],
         "summary" => $cached["summary"],
-        "cached" => true
+        "cached" => true,
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
-$html = file_get_contents($url);
+$html = file_get_contents($url); // 1-4에서 공용 httpGet()으로 교체 예정
 
 if ($html === false) {
     jsonError(500, "페이지를 가져오지 못했습니다.");
 }
 
+// 제목도 서버가 직접 추출 (클라이언트 입력 신뢰 제거)
+$title = extractTitle($html);
 $text = extractBody($html);
 
 saveArticle($topicId, $title, $text);
@@ -56,7 +54,5 @@ saveSummary($topicId, $url, $title, $answer, env("GEMINI_MODEL", "gemini-2.5-fla
 echo json_encode([
     "url" => $url,
     "summary" => $answer,
-    "cached" => false
+    "cached" => false,
 ], JSON_UNESCAPED_UNICODE);
-
-

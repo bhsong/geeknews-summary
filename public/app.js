@@ -19,7 +19,7 @@ btn.onclick = async () => {
                 const r = await fetch("api/summarize.php", {
                     method: "POST",
                     headers: {"Content-Type": "application/json"},
-                    body: JSON.stringify({url: item.url, title: item.title})
+                    body: JSON.stringify({topic_id: item.id})
                 });
                 const d = await r.json();
                 card.querySelector("p").textContent = d.summary ?? d.error ?? "요약 실패";

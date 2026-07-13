@@ -43,3 +43,42 @@ test('extractBody collapses whitespace and trims the result', function () {
 
     expect(extractBody($html))->toBe('여러 줄에 걸친 내용');
 });
+
+test('extractTitle reads the h1 inside the topictitle block', function () {
+    // news.hada.io/topic?id=N 의 실제 마크업 구조
+    $html = "<div class='topictitle link'><span id='dead25000'></span>"
+        . "<a href='https://github.com/DevSymphony/sym-cli' class='bold ud'>"
+        . "<h1>Show GN: LLM 기반의 코드 컨벤션 린터를 만들었습니다.</h1></a> "
+        . "<span class=topicurl>(github.com/DevSymphony)</span></div>";
+
+    expect(extractTitle($html))->toBe('Show GN: LLM 기반의 코드 컨벤션 린터를 만들었습니다.');
+});
+
+test('extractTitle ignores the topicurl suffix next to the title', function () {
+    $html = "<div class='topictitle link'><a href='#'><h1>제목</h1></a>"
+        . "<span class=topicurl>(example.com)</span></div>";
+
+    expect(extractTitle($html))->toBe('제목');
+});
+
+test('extractTitle strips inner tags and decodes html entities', function () {
+    $html = "<div class='topictitle'><h1><em>A</em> &amp; B&#39;s &lt;guide&gt;</h1></div>";
+
+    expect(extractTitle($html))->toBe("A & B's <guide>");
+});
+
+test('extractTitle collapses whitespace and trims the result', function () {
+    $html = "<div class='topictitle'><h1>\n  여러   줄\n  제목  \n</h1></div>";
+
+    expect(extractTitle($html))->toBe('여러 줄 제목');
+});
+
+test('extractTitle falls back to the first h1 when the topictitle marker is missing', function () {
+    $html = '<article><h1>마커 없는 제목</h1><p>본문</p></article>';
+
+    expect(extractTitle($html))->toBe('마커 없는 제목');
+});
+
+test('extractTitle returns an empty string when no h1 exists', function () {
+    expect(extractTitle('<p>제목이 없는 페이지</p>'))->toBe('');
+});

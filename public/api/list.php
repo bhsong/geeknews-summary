@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . "/../../src/api.php";
 
 jsonHeader();
@@ -15,13 +16,18 @@ $seen = [];
 foreach ($m as $match) {
     $id = $match[2];
     $title = trim(strip_tags(html_entity_decode($match[1])));
-    if (isset($seen[$id]) || $title === "") continue;
+    if (isset($seen[$id]) || $title === "") {
+        continue;
+    }
     $seen[$id] = true;
     $items[] = [
+        "id" => (int) $id,
         "url" => "https://news.hada.io/topic?id=" . $id,
-        "title" => $title
+        "title" => $title,
     ];
-    if (count($items) >= 10) break;
+    if (count($items) >= 10) {
+        break;
+    }
 }
 
 echo json_encode(["items" => $items, "count" => count($items)], JSON_UNESCAPED_UNICODE);
