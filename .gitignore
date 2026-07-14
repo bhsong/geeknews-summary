@@ -5,3 +5,12 @@
 nohup.out
 vendor/
 CLAUDE.md
+
+# PHP
+.php-cs-fixer.cache
+
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
