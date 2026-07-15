@@ -1,25 +1,13 @@
-import os
 from logging.config import fileConfig
 
-from dotenv import load_dotenv
 from sqlalchemy import create_engine, pool
 
 from alembic import context
+from app.config import Settings
 
 
 def _database_url() -> str:
-    load_dotenv(".env")
-    load_dotenv(".env.local", override=True)
-
-    if os.getenv("APP_ENV") == "testing":
-        name = os.getenv("DB_NAME_TEST") or f"{os.getenv('DB_NAME', '')}_test"
-    else:
-        name = os.getenv("DB_NAME", "")
-
-    user = os.getenv("DB_USER", "")
-    password = os.getenv("DB_PASS", "")
-    host = os.getenv("DB_HOST", "localhost")
-    return f"mysql+pymysql://{user}:{password}@{host}/{name}?charset=utf8mb4"
+    return Settings().database_url
 
 
 # this is the Alembic Config object, which provides
