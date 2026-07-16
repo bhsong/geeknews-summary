@@ -10,8 +10,10 @@ from app.config import Settings
 def _settings(**overrides: str) -> Settings:
     """hermetic Settings 생성 헬퍼.
 
-    6개 필드를 전부 명시로 넘긴다. pydantic-settings 우선순위(init 인자 > OS env
-    > .env)상 init 인자가 최우선이라, 실제 .env/OS env가 있어도 결과가 결정적이다.
+    DB 관련 6개 필드를 명시로 넘긴다. pydantic-settings 우선순위(init 인자 >
+    OS env > .env)상 init 인자가 최우선이라, 실제 .env/OS env가 있어도 결과가
+    결정적이다. gemini_* 필드는 여기서 검증하지 않으므로 넘기지 않는다(실 .env
+    값이 들어오지만 database_* 결과에 영향이 없다).
     """
     base: dict[str, str] = {
         "app_env": "production",

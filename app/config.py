@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     db_name_test: str = ""
     db_user: str = ""
     db_pass: str = ""
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.5-flash"
 
     @property
     def database_name(self) -> str:
