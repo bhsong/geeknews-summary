@@ -9,11 +9,14 @@
 from sqlalchemy.orm import Session
 
 from app.models import ChatTurn
-from app.repositories import ChatRepository, SummaryRepository
+from app.repositories import ArticleRepository, ChatRepository, SummaryRepository
 from app.topic import topic_url
 
 TOPIC_ID = 999000002
 MODEL = "gemini-2.5-flash"
+
+# 원본 Pest가 쓰던 값 — summaries 쪽 TOPIC_ID와 겹치지 않게 분리돼 있다.
+ARTICLE_TOPIC_ID = 999000001
 
 
 def test_find는_요약이_없으면_None(db_session: Session):
@@ -107,3 +110,44 @@ def test_get_recent_messages는_limit_만큼_최근_것만_시간순으로(db_se
     messages = repo.get_recent_messages(session_id, 2)
 
     assert [m.content for m in messages] == ["메시지 4", "메시지 5"]
+
+
+def test_find는_기사가_없으면_None(db_session: Session):
+    repo = ArticleRepository(db_session)
+
+    assert repo.find(ARTICLE_TOPIC_ID) is None
+
+
+def test_save한_기사를_find로_읽어온다(db_session: Session):
+    repo = ArticleRepository(db_session)
+
+    repo.save(ARTICLE_TOPIC_ID, "테스트 기사 제목", "테스트 기사 본문")
+    article = repo.find(ARTICLE_TOPIC_ID)
+
+    assert article is not None
+    assert article.topic_id == ARTICLE_TOPIC_ID
+    assert article.title == "테스트 기사 제목"
+    assert article.content == "테스트 기사 본문"
+
+
+def test_같은_topic_id로_다시_save하면_기사를_덮어쓴다(db_session: Session):
+    repo = ArticleRepository(db_session)
+
+    repo.save(ARTICLE_TOPIC_ID, "첫 제목", "첫 본문")
+    repo.save(ARTICLE_TOPIC_ID, "수정된 제목", "수정된 본문")
+    article = repo.find(ARTICLE_TOPIC_ID)
+
+    assert article is not None
+    assert article.title == "수정된 제목"
+    assert article.content == "수정된 본문"
+
+
+def test_search는_본문_키워드로_기사를_찾는다(
+    db_session: Session, committed_article: tuple[int, str]
+):
+    topic_id, keyword = committed_article
+    repo = ArticleRepository(db_session)
+
+    hits = repo.search(keyword)
+
+    assert [hit.topic_id for hit in hits] == [topic_id]

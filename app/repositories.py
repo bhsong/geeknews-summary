@@ -7,12 +7,12 @@ pydantic 모델이라 ORM 매핑이 없고, 스키마의 단일 출처는 Alembi
 따라서 쿼리는 text()로 직접 씀
 """
 
-from typing import Literal
+from typing import Any, Literal, cast
 
-from sqlalchemy import text
+from sqlalchemy import CursorResult, text
 from sqlalchemy.orm import Session
 
-from app.models import ChatTurn, Summary
+from app.models import Article, ArticleSearchHit, ChatTurn, Summary
 
 
 class SummaryRepository:
@@ -79,7 +79,11 @@ class ChatRepository:
         self._session = session
 
     def create_session(self) -> int:
-        result = self._session.execute(text("INSERT INTO chat_session () VALUES ()"))
+        # result = self._session.execute(text("INSERT INTO chat_session () VALUES ()"))
+        result = cast(
+            CursorResult[Any],
+            self._session.execute(text("INSERT INTO chat_session () VALUES ()")),
+        )
         self._session.commit()
 
         return result.lastrowid
@@ -124,3 +128,59 @@ class ChatRepository:
         )
 
         return [ChatTurn.model_validate(dict(row)) for row in rows]
+
+
+class ArticleRepository:
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def find(self, topic_id: int) -> Article | None:
+        row = (
+            self._session.execute(
+                text("SELECT * FROM articles WHERE topic_id = :topic_id"),
+                {"topic_id": topic_id},
+            )
+            .mappings()
+            .one_or_none()
+        )
+
+        return None if row is None else Article.model_validate(dict(row))
+
+    def save(self, topic_id: int, title: str, content: str) -> None:
+        """upsert - 재수집 시 같은 topic_id 행을 덮어씀"""
+        self._session.execute(
+            text("""
+                INSERT INTO articles (topic_id, title, content)
+                VALUES (:topic_id, :title, :content)
+                ON DUPLICATE KEY UPDATE 
+                    title = VALUES(title), content = VALUES(content)
+                """),
+            {"topic_id": topic_id, "title": title, "content": content},
+        )
+        self._session.commit()
+
+    def search(self, query: str, limit: int = 3) -> list[ArticleSearchHit]:
+        """질문과 관련된 기사를 FULLTEXT(ngram)로 찾아 관련도 순으로.
+        요약이 없는 기사도 검색 대상이라 LEFT JOIN
+        score는 정렬에만 쓰고 반환하지 않음. 4-1에서 추가할 것으로 보임
+        """
+        rows = (
+            self._session.execute(
+                text("""
+                    SELECT a.topic_id, a.title, a.content, s.summary, 
+                        MATCH(a.title, a.content) 
+                            AGAINST(:query IN NATURAL LANGUAGE MODE) AS score
+                    FROM articles a 
+                    LEFT JOIN summaries s ON s.topic_id = a.topic_id
+                    WHERE MATCH(a.title, a.content)
+                            AGAINST(:query IN NATURAL LANGUAGE MODE)
+                    ORDER BY score DESC 
+                    LIMIT :limit 
+                    """),
+                {"query": query, "limit": limit},
+            )
+            .mappings()
+            .all()
+        )
+
+        return [ArticleSearchHit.model_validate(dict(row)) for row in rows]
