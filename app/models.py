@@ -1,5 +1,6 @@
 """pydantic 스키마 - 도메인 데이터 구조와 요청/응답 모델"""
 
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel
@@ -16,3 +17,15 @@ class ChatTurn(BaseModel):
 
     role: Literal["user", "model"]
     content: str
+
+
+class Summary(BaseModel):
+    """summaries 테이블의 한 행. 스키마 원본은 Alembic 리비전"""
+
+    topic_id: int
+    url: str
+    title: str
+    summary: str
+    model: str
+    created_at: datetime
+    updated_at: datetime
