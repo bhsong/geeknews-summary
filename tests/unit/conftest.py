@@ -94,3 +94,83 @@ def committed_article(require_test_db: None) -> Iterator[tuple[int, str]]:
                 text("DELETE FROM articles WHERE topic_id = :topic_id"),
                 {"topic_id": SEARCH_TOPIC_ID},
             )
+
+
+# --- 라우터 테스트용 seam (2-4) ---------------------------------------------
+# 라우터 단위 테스트는 세 seam만 가짜로 갈아끼운다: 세션(롤백), Gemini(스파이),
+# 페치(스텁). DB는 실테스트DB에 그대로 두고 db_session 롤백으로 격리한다.
+
+
+class FakeGemini:
+    """Gemini 호출 스파이. generate/chat 호출을 기록하고 정해진 답을 돌려준다.
+
+    - generate_calls: generate에 넘어온 prompt들(캐시 히트 시 0건이어야 함)
+    - chat_calls: chat에 넘어온 messages 스냅샷들(history 순서·저장 내용 검증용)
+    """
+
+    def __init__(self) -> None:
+        self.generate_calls: list[str] = []
+        self.chat_calls: list[list[object]] = []
+        self.generate_return = "가짜 요약 응답"
+        self.chat_return = "가짜 챗 응답"
+
+    def generate(self, prompt: str) -> str:
+        self.generate_calls.append(prompt)
+        return self.generate_return
+
+    def chat(self, messages: object) -> str:
+        self.chat_calls.append(list(messages))  # type: ignore[arg-type]
+        return self.chat_return
+
+
+class FakeFetch:
+    """페치 스텁. 호출 URL을 기록하고 정해진 HTML을 돌려준다(캐시 히트 시 0건).
+
+    error를 세팅하면 그 예외를 던져 페치 실패(500) 경로를 재현한다.
+    """
+
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+        self.return_html = "<html><body>스텁 본문</body></html>"
+        self.error: Exception | None = None
+
+    def __call__(self, url: str) -> str:
+        self.calls.append(url)
+        if self.error is not None:
+            raise self.error
+        return self.return_html
+
+
+@pytest.fixture
+def fake_gemini() -> FakeGemini:
+    return FakeGemini()
+
+
+@pytest.fixture
+def fake_fetch() -> FakeFetch:
+    return FakeFetch()
+
+
+@pytest.fixture
+def router_client(
+    db_session: Session, fake_gemini: FakeGemini, fake_fetch: FakeFetch
+) -> Iterator["object"]:
+    """세 seam을 오버라이드한 TestClient.
+
+    app.dependencies/app.fetcher가 아직 없는 Red 단계에서는 이 import가 실패해
+    라우터 테스트만 에러가 나고 다른 테스트 수집은 깨지지 않는다(지연 import).
+    """
+    from fastapi.testclient import TestClient
+
+    from app.db import get_session
+    from app.dependencies import get_fetch, get_gemini_client
+    from app.main import app
+
+    app.dependency_overrides[get_session] = lambda: db_session
+    app.dependency_overrides[get_gemini_client] = lambda: fake_gemini
+    app.dependency_overrides[get_fetch] = lambda: fake_fetch
+    try:
+        with TestClient(app) as client:
+            yield client
+    finally:
+        app.dependency_overrides.clear()

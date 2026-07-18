@@ -27,6 +27,21 @@ dev = [
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI 관용구: Depends()/Query() 등을 인자 기본값에서 호출하는 건 정상이다.
+# B008(가변 기본값 호출)을 이 DI 호출들에 한해서만 끄고, 나머지엔 계속 작동시킨다.
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Header",
+    "fastapi.Cookie",
+    "fastapi.Body",
+    "fastapi.Form",
+    "fastapi.File",
+    "fastapi.Security",
+]
+
 [tool.basedpyright]
 include = ["app", "tests"]
 typeCheckingMode = "standard"

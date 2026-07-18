@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, PositiveInt
 
 
 class ChatTurn(BaseModel):
@@ -51,3 +51,22 @@ class ArticleSearchHit(BaseModel):
     title: str
     content: str
     summary: str | None
+
+
+class SummarizeRequest(BaseModel):
+    """
+    POST /api/summarize 요청. topic_id만 받음
+    PositiveInt라 0/음수는 검증 실패. 정수형 문자열은
+    lax 강제 변환으로 통과하고, "1.5"/"abc"/URL 문자열은 실패
+    FastAPI 기본 422는 main의 exception handler가 계약 봉투(400 + {"error"})로 변환
+    """
+
+    topic_id: PositiveInt
+
+
+class SummarizeResponse(BaseModel):
+    """POST /api/summarize 응답. cached=True면 Gemini/페치 없이 저장분 반환"""
+
+    url: str
+    summary: str
+    cached: bool
